@@ -1,26 +1,58 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import useAuthStore from "../store/useAuthStore";
 
 const ItemList = () => {
+  const { user, token } = useAuthStore();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchItems = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/items");
+      setItems(res.data);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const res = await axios.get("http://localhost:5000/api/items");
-        setItems(res.data);
-      } catch (error) {
-        console.log("Error fetching items:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchItems();
   }, []);
 
-  if (loading) return <p className="text-center mt-10">Loading items...</p>;
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5000/api/items/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchItems(); // refresh list
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
+  const handleEdit = async (id) => {
+    const title = prompt("Enter new title:");
+    const description = prompt("Enter new description:");
+    const type = prompt("Enter type: lost or found");
+
+    if (!title || !description || !type) return;
+
+    try {
+      await axios.put(
+        `http://localhost:5000/api/items/${id}`,
+        { title, description, type },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchItems(); // refresh list
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  if (loading) return <p className="text-center mt-10">Loading items...</p>;
   if (items.length === 0) return <p className="text-center mt-10">No items found.</p>;
 
   return (
@@ -28,7 +60,7 @@ const ItemList = () => {
       <h2 className="text-2xl font-bold mb-6 text-center">Lost & Found Items</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {items.map((item) => (
-          <div key={item._id} className="bg-white shadow-md rounded p-4">
+          <div key={item._id} className="bg-white shadow-md rounded p-4 relative">
             <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
             <p className="text-gray-700 mb-2">{item.description}</p>
             <span
@@ -38,6 +70,23 @@ const ItemList = () => {
             >
               {item.type.toUpperCase()}
             </span>
+
+            {user && user._id === item.user && (
+              <div className="mt-4 space-x-2">
+                <button
+                  onClick={() => handleEdit(item._id)}
+                  className="bg-yellow-400 text-white px-3 py-1 rounded hover:bg-yellow-500"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(item._id)}
+                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -46,3 +95,4 @@ const ItemList = () => {
 };
 
 export default ItemList;
+
