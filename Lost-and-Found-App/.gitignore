@@ -1,0 +1,5 @@
+# Ignore backend environment
+server/.env
+
+# Ignore frontend environment
+client/.env
